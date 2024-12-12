@@ -1,0 +1,19 @@
+# Use Python 3.10 slim image as base
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements file
+COPY docker/requirements.updater.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.updater.txt
+
+# Copy only the necessary source files
+COPY src/updater_job.py src/
+COPY src/db.py src/
+COPY src/config.py src/
+
+# Command to run the updater function
+CMD ["python", "src/updater_job.py"]

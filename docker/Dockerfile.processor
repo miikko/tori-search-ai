@@ -1,0 +1,25 @@
+# Use Python 3.10 slim image as base
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements file
+COPY docker/requirements.processor.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.processor.txt
+
+# Download embedding model
+RUN python -m spacy download fi_core_news_lg
+
+# Copy only the necessary source files
+COPY src/processor_job.py src/
+COPY src/db.py src/
+COPY src/config.py src/
+COPY src/captioning.py src/
+COPY src/translator.py src/
+COPY src/embedding.py src/
+
+# Command to run the processor function
+CMD ["python", "src/processor_job.py"]

@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first to leverage Docker cache
+COPY docker/requirements.web.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.web.txt
+
+# Download embedding model
+RUN python -m spacy download fi_core_news_lg
+
+# Copy the application code
+COPY src/web.py src/
+COPY src/db.py src/
+COPY src/embedding.py src/
+COPY src/translator.py src/
+COPY src/config.py src/
+COPY src/gunicorn_config.py src/
+COPY src/templates/ src/templates/
+COPY src/static/ src/static/
+
+# Expose the port Gunicorn will listen on
+EXPOSE 8000
+
+# Start Gunicorn
+CMD ["gunicorn", "--config", "src/gunicorn_config.py", "web:app"]

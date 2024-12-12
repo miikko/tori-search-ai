@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TORI-AI-SEARCH</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            margin-bottom: 10px;
+        }
+        
+        .header .description {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        
+        .search-container {
+            text-align: center;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        #search-input {
+            width: 80%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .listing-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .listing-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .listing-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .listing-card h3 {
+            margin: 10px 0;
+            color: #333;
+        }
+        
+        .price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2ecc71;
+            margin: 10px 0;
+        }
+        
+        .location {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .attributes {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .attributes span {
+            display: inline-block;
+            margin-right: 10px;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        #search-button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        #search-button:hover {
+            background-color: #27ae60;
+        }
+        
+        .loader {
+            display: none;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        .loader-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2ecc71;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        .loader-text {
+            display: inline-block;
+            color: #666;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #search-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-message {
+            text-align: center;
+            color: #e74c3c;
+            margin-top: 20px;
+            display: none;
+            padding: 15px;
+            background-color: #fde8e8;
+            border-radius: 4px;
+        }
+    </style>
+    <script>
+        function setLoading(isLoading) {
+            const loader = document.getElementById('loader');
+            const searchButton = document.getElementById('search-button');
+            const searchInput = document.getElementById('search-input');
+            
+            loader.style.display = isLoading ? 'block' : 'none';
+            searchButton.disabled = isLoading;
+            searchInput.disabled = isLoading;
+            searchButton.textContent = isLoading ? 'Searching...' : 'Search';
+        }
+
+        function searchListings() {
+            const query = document.getElementById('search-input').value;
+            const grid = document.getElementById('results-grid');
+            const noResults = document.getElementById('no-results');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Clear previous results and messages
+            grid.innerHTML = '';
+            noResults.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            setLoading(true);
+            
+            fetch(`/search?q=${encodeURIComponent(query)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.length === 0) {
+                        noResults.style.display = 'block';
+                    } else {
+                        data.forEach(item => {
+                            const imageUrl = item.image_urls && item.image_urls.length > 0 
+                                ? item.image_urls[0] 
+                                : '/static/listing-placeholder.png';
+                            
+                            const attributes = Object.entries(item.attributes || {})
+                                .map(([key, value]) => `<span>${key}: ${value}</span>`)
+                                .join(' ');
+                            
+                            grid.innerHTML += `
+                                <div class="listing-card" onclick="window.open('${item.url}', '_blank')">
+                                    <img src="${imageUrl}" alt="${item.title}">
+                                    <h3>${item.title}</h3>
+                                    <div class="price">${item.price}€</div>
+                                    <div class="location">${item.address}</div>
+                                    <p>${item.about ? item.about.substring(0, 100) + '...' : ''}</p>
+                                    <div class="attributes">
+                                        ${attributes}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    errorMessage.style.display = 'block';
+                    errorMessage.textContent = 'An error occurred while searching. Please try again later.';
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('search-input').addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    searchListings();
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="header">
+        <h1>TORI-AI-SEARCH</h1>
+        <div class="description">
+            AI-powered search for cabinets on Tori.fi
+        </div>
+    </div>
+    
+    <div class="search-container">
+        <input type="text" 
+               id="search-input" 
+               placeholder="What kind of a cabinet are you looking for?">
+        <button id="search-button" onclick="searchListings()">Search</button>
+    </div>
+    
+    <div id="loader" class="loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Searching for items...</div>
+    </div>
+    
+    <div id="results-grid" class="results-grid">
+        <!-- Results will be dynamically inserted here -->
+    </div>
+
+    <div id="no-results" class="no-results">
+        No results found for your query.
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+</body>
+</html>

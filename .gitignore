@@ -1,0 +1,12 @@
+dist/
+infra/imports
+.terraform
+cdktf.out
+cdktf.log
+*terraform.*.tfstate*
+.env
+*.zip
+__pycache__
+.venv
+.env
+personal*.sh

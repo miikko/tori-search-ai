@@ -1,0 +1,10 @@
+azure-ai-vision-imageanalysis==1.0.0
+azure-ai-translation-text==1.0.1
+azure-core==1.32.0
+azure-cosmos==4.9.0
+playwright==1.49.0
+python-dotenv==1.0.1
+requests==2.32.3
+flask==3.1.0
+spacy==3.8.2
+gunicorn==23.0.0
