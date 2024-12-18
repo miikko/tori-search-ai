@@ -61,6 +61,7 @@ This document describes the Azure infrastructure used in the Tori Search AI proj
 ### Prerequisites
 1. Install Node.js and CDKTF CLI:
    - Install Node.js from https://nodejs.org/
+   - Install Terraform CLI: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli#install-terraform
    - Install CDKTF CLI:
    ```bash
    npm install --global cdktf-cli@0.20.10

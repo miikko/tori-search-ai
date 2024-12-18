@@ -84,3 +84,19 @@ docker run --rm -it --env-file .env hovvk/tori-search-ai-processor-job:latest
 # Run web app
 docker run --rm -it --env-file .env hovvk/tori-search-ai-web:latest
 ```
+
+## CI/CD
+
+The project uses GitHub Actions to build and deploy the Docker images and the infrastructure. The `master` branch is automatically deployed to Azure.
+
+### Setup
+
+1. Create a [personal access token](https://docs.docker.com/security/for-developers/access-tokens/) in Docker Hub and add it as the `DOCKERHUB_TOKEN` GitHub Actions secret.
+1. Follow instructions from [here](https://github.com/marketplace/actions/azure-login#login-with-a-service-principal-secret) to setup Azure credentials.
+1. Create a GitHub Actions secret for the `AZURE_SUBSCRIPTION_ID` variable.
+1. Create a GitHub Actions secret for the `STATE_SERVER_USERNAME` variable.
+1. Create a GitHub Actions secret for the `STATE_SERVER_PASSWORD` variable.
+
+### Troubleshooting
+
+- If you encounter issues with Azure login, check that your Azure Service Principal client secret is still valid. Secrets are only valid for a certain time (max 2 years) after their creation.

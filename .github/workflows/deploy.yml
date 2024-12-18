@@ -1,0 +1,116 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  DOCKERHUB_USERNAME: hovvk
+  PROJECT_PREFIX: tori-search-ai
+
+jobs:
+  docker-build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push scraper image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          file: docker/Dockerfile.scraper
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-scraper-job:latest
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-scraper-job:latest
+          cache-to: type=inline
+
+      - name: Build and push updater image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          file: docker/Dockerfile.updater
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-updater-job:latest
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-updater-job:latest
+          cache-to: type=inline
+
+      - name: Build and push processor image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          file: docker/Dockerfile.processor
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-processor-job:latest
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-processor-job:latest
+          cache-to: type=inline
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          file: docker/Dockerfile.web
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-web:latest
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.PROJECT_PREFIX }}-web:latest
+          cache-to: type=inline
+
+  deploy-infrastructure:
+    needs: docker-build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        working-directory: ./infra
+        run: pip install -r requirements.txt
+
+      - name: Azure Login
+        uses: azure/login@v2
+        env:
+          # Suppress Azure CLI console output
+          AZURE_CORE_OUTPUT: none
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Get CDKTF providers
+        working-directory: ./infra
+        run: npx cdktf-cli@0.20.10 get
+
+      - name: Deploy infrastructure
+        working-directory: ./infra
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          STATE_SERVER_USERNAME: ${{ secrets.STATE_SERVER_USERNAME }}
+          STATE_SERVER_PASSWORD: ${{ secrets.STATE_SERVER_PASSWORD }}
+        run: npx cdktf-cli@0.20.10 deploy ToriSearchAiStack --auto-approve
